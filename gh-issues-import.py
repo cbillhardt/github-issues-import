@@ -26,6 +26,7 @@ def init_config():
 	config.add_section('target')
 	config.add_section('format')
 	config.add_section('settings')
+	config.add_section('protocol')
 	
 	arg_parser = argparse.ArgumentParser(description="Import issues from one GitHub repository into another.")
 	
@@ -82,8 +83,8 @@ def init_config():
 		# if SOURCE server is not github.com, then assume ENTERPRISE github (yourdomain.com/api/v3...)
 		if (config.get(which, 'server') == "github.com") :
 			api_url = "https://api.github.com"
-		else:
-			api_url = "https://%s/api/v3" % config.get(which, 'server')
+		else :
+			api_url = "%s://%s/api/v3" % (config.get(which, 'protocol'), config.get(which, 'server'))
 		
 		config.set(which, 'url', "%s/repos/%s" % (api_url, config.get(which, 'repository')))
 	
@@ -256,7 +257,8 @@ def import_comments(comments, issue_number):
 # Will only import milestones and issues that are in use by the imported issues, and do not exist in the target repository
 def import_issues(issues):
 	
-	known_milestones = get_milestones('target')
+	# Turning off milestones as this functionality is not working in gitbucket.
+	known_milestones = []#get_milestones('target')
 	def get_milestone_by_title(title):
 		for milestone in known_milestones:
 			if milestone['title'] == title : return milestone
