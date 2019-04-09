@@ -39,6 +39,8 @@ def init_config():
 	arg_parser.add_argument('--ignore-comments',  dest='ignore_comments',  action='store_true', help="Do not import comments in the issue.")		
 	arg_parser.add_argument('--ignore-milestone', dest='ignore_milestone', action='store_true', help="Do not import the milestone attached to the issue.")
 	arg_parser.add_argument('--ignore-labels',    dest='ignore_labels',    action='store_true', help="Do not import labels attached to the issue.")
+	arg_parser.add_argument('--pull-issues',      dest='pull_issues',      action='store_true', help="Pull issues from remote.  Else read them from issues.json.")
+	arg_parser.add_argument('--push-issues',      dest='push_issues',      action='store_true', help="Push issues to remote.  Else write them locally to issues.json.")
 	
 	include_group = arg_parser.add_mutually_exclusive_group(required=True)
 	include_group.add_argument("--all", dest='import_all', action='store_true', help="Import all issues, regardless of state.")
@@ -116,7 +118,7 @@ def init_config():
 	get_credentials_for('target')
 	
 	# Everything is here! Continue on our merry way...
-	return args.issues or []
+	return args
 
 def format_date(datestring):
 	# The date comes from the API in ISO-8601 format
@@ -368,25 +370,32 @@ def import_issues(issues):
 
 if __name__ == '__main__':
 
-	issue_ids = init_config()	
-	issues = []
-	
-	# Argparser will prevent us from getting both issue ids and specifying issue state, so no duplicates will be added
-	if (len(issue_ids) > 0):
-		issues += get_issues_by_id(issue_ids)
-	
-	if config.getboolean('settings', 'import-open-issues'):
-		issues += get_issues_by_state('source', 'open')
-	
-	if config.getboolean('settings', 'import-closed-issues'):
-		issues += get_issues_by_state('source', 'closed')
-	
-	# Sort issues based on their original `id` field
-	# Confusing, but taken from http://stackoverflow.com/a/2878123/617937
-	issues.sort(key=lambda x:x['number'])
-	
-	# Finally, actually, add these issues to the target repository
-	import_issues(issues)
+    args = init_config()
+    issues = []
 
+    if args.pull_issues:
+        issue_ids = args.issues or []
 
+        # Argparser will prevent us from getting both issue ids and specifying issue state, so no duplicates will be added
+        if (len(issue_ids) > 0):
+            issues += get_issues_by_id(issue_ids)
 
+        if config.getboolean('settings', 'import-open-issues'):
+            issues += get_issues_by_state('source', 'open')
+
+        if config.getboolean('settings', 'import-closed-issues'):
+            issues += get_issues_by_state('source', 'closed')
+
+        # Sort issues based on their original `id` field
+        # Confusing, but taken from http://stackoverflow.com/a/2878123/617937
+        issues.sort(key=lambda x:x['number'])
+    else:
+        with open('issues.json') as i:
+            issues = json.load(i)
+
+    if args.push_issues:
+        # Finally, actually, add these issues to the target repository
+        import_issues(issues)
+    else:
+        with open('issues.json', 'w') as i:
+            i.write(str(issues))
