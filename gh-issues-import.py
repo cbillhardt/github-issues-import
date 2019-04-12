@@ -398,4 +398,4 @@ if __name__ == '__main__':
         import_issues(issues)
     else:
         with open('issues.json', 'w') as i:
-            i.write(str(issues))
+            json.dump(issues, i)
